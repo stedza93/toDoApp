@@ -1,19 +1,27 @@
 "use strict";
-const parse5 = require("parse5");
-const documentAdapter = require("./documentAdapter");
-const NODE_TYPE = require("../living/node-type");
-const idlUtils = require("../living/generated/utils");
+var parse5 = require("parse5");
+var serializer = new parse5.TreeSerializer(require("./documentAdapter"));
 
-const serializer = new parse5.TreeSerializer(documentAdapter);
-
-exports.domToHtml = function (iterable) {
-  let ret = "";
-  for (const node of iterable) {
-    if (node.nodeType === NODE_TYPE.DOCUMENT_NODE) {
-      ret += serializer.serialize(node);
-    } else {
-      ret += serializer.serialize({ childNodes: [idlUtils.wrapperForImpl(node)] });
-    }
+exports.domToHtml = function (dom) {
+  if (dom._toArray) {
+    // node list
+    dom = dom._toArray();
   }
-  return ret;
+
+  if (typeof dom.nodeType === "number") {
+    return dom.nodeType === dom.DOCUMENT_NODE ?
+           serializer.serialize(dom) :
+           serializer.serialize({ childNodes: [dom] });
+  } else if (typeof dom.length === "number") {
+    // array or array like
+    var ret = "";
+    for (var i = 0; i < dom.length; i++) {
+      ret += dom[i].nodeType === dom.DOCUMENT_NODE ?
+             serializer.serialize(dom[i]) :
+             serializer.serialize({ childNodes: [dom[i]] });
+    }
+    return ret;
+  }
+
+  throw new TypeError("First argument should be a Node or an array like object");
 };
